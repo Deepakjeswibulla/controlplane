@@ -1,0 +1,26 @@
+policy_id: internal_knowledge_v1
+use_case: internal_knowledge
+fail_mode: fail_open
+description: 'Employee-facing assistant over internal documents. Unsupported claims
+  should be visibly flagged since employees may act on them; higher consequence unsupported
+  claims escalate to review.
+
+  '
+thresholds:
+  performance:
+    medium: warn
+    high: review
+    critical: review
+  privacy:
+    medium: redact
+    high: redact
+    critical: redact
+  security:
+    medium: block
+    high: block
+    critical: block
+  cost:
+    high: reroute
+    critical: review
+consequence_overrides:
+  critical: block

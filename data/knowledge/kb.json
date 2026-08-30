@@ -1,0 +1,44 @@
+[
+  {
+    "id": "kb-001",
+    "title": "Password Reset Policy",
+    "domain": "customer_support",
+    "text": "Customers can reset their account password from the login page by selecting 'Forgot password'. A reset link is emailed and expires after 30 minutes. No identity document is required for a self-service password reset."
+  },
+  {
+    "id": "kb-002",
+    "title": "Account Deactivation Policy",
+    "domain": "customer_support",
+    "text": "Customers may deactivate their account from account settings. Deactivation is reversible within 30 days by logging back in. After 30 days the account and associated data are permanently deleted."
+  },
+  {
+    "id": "kb-003",
+    "title": "Internal Expense Reimbursement Guide",
+    "domain": "internal_knowledge",
+    "text": "Employees may submit expense reimbursements up to $500 without manager approval. Expenses above $500 require written manager sign-off before submission. Travel expenses must include itemized receipts."
+  },
+  {
+    "id": "kb-004",
+    "title": "Internal Remote Work Guidelines",
+    "domain": "internal_knowledge",
+    "text": "Employees may work remotely up to 3 days per week without special approval. Fully remote arrangements require HR and manager approval and are reviewed annually."
+  },
+  {
+    "id": "kb-005",
+    "title": "Homeowners Policy POL-1001 Coverage Summary",
+    "domain": "decision_support",
+    "text": "Policy POL-1001 covers structural fire damage and windstorm damage up to $250,000. It explicitly excludes flood damage and damage caused by gradual water seepage. Claims for flood damage require a separate flood insurance rider, which this policy does not include."
+  },
+  {
+    "id": "kb-006",
+    "title": "Homeowners Policy POL-1002 Coverage Summary",
+    "domain": "decision_support",
+    "text": "Policy POL-1002 covers theft and fire damage up to $150,000. Water damage from burst pipes is covered if the pipe failure was sudden and accidental. Flood damage from external sources is excluded."
+  },
+  {
+    "id": "kb-007",
+    "title": "Auto Policy POL-2001 Coverage Summary",
+    "domain": "decision_support",
+    "text": "Policy POL-2001 provides liability and collision coverage for the named driver. It does not cover damage occurring while the vehicle is used for commercial ridesharing purposes."
+  }
+]

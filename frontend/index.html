@@ -1,0 +1,759 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>ControlPlane.ai — Runtime Control Layer for Enterprise AI</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --bg: #0b0e14;
+    --panel: #131722;
+    --panel-2: #1a1f2e;
+    --panel-3: #0f1420;
+    --border: #262c3d;
+    --text: #e6e8ee;
+    --muted: #8b91a3;
+    --accent: #5b8cff;
+    --allow: #33c17a;
+    --warn: #e8b339;
+    --edit: #4fb0e8;
+    --redact: #b06ee8;
+    --reroute: #e88f39;
+    --review: #e8592f;
+    --block: #e13c5b;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  }
+  header {
+    padding: 18px 28px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: baseline; justify-content: space-between;
+    position: sticky; top: 0; background: var(--bg); z-index: 10;
+  }
+  header h1 { font-size: 18px; margin: 0; letter-spacing: 0.2px; }
+  header h1 span { color: var(--accent); }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; }
+  header nav { display: flex; gap: 8px; align-items: center; }
+  header nav button {
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+    padding: 7px 12px; border-radius: 8px; font-size: 12.5px; cursor: pointer;
+  }
+  header nav button.active { color: var(--text); border-color: var(--accent); background: rgba(91,140,255,.1); }
+  main { padding: 24px 28px 60px; max-width: 1280px; margin: 0 auto; }
+  .grid { display: grid; gap: 16px; }
+  .grid-4 { grid-template-columns: repeat(4, 1fr); }
+  .grid-2 { grid-template-columns: 2fr 1fr; }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 900px) { .grid-4, .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 18px;
+  }
+  .card h3 { margin: 0 0 10px; font-size: 12.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; }
+  .stat { font-size: 28px; font-weight: 700; }
+  .stat-row { display: flex; justify-content: space-between; align-items: center; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px;
+    border-radius: 999px; font-size: 11.5px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .pill-allow { background: rgba(51,193,122,.15); color: var(--allow); }
+  .pill-warn { background: rgba(232,179,57,.15); color: var(--warn); }
+  .pill-edit { background: rgba(79,176,232,.15); color: var(--edit); }
+  .pill-redact { background: rgba(176,110,232,.15); color: var(--redact); }
+  .pill-reroute { background: rgba(232,143,57,.15); color: var(--reroute); }
+  .pill-review { background: rgba(232,89,47,.15); color: var(--review); }
+  .pill-block { background: rgba(225,60,91,.15); color: var(--block); }
+  section { margin-top: 30px; }
+  section > h2 { font-size: 14px; margin: 0 0 12px; color: var(--text); display:flex; align-items:center; gap:8px;}
+  section > h2 .sub { color: var(--muted); font-weight: 400; font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.4px;}
+  td { padding: 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr.row { cursor: pointer; }
+  tr.row:hover { background: var(--panel-2); }
+  .muted { color: var(--muted); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .btns { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0 6px; }
+  button {
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+    padding: 9px 14px; border-radius: 8px; font-size: 13px; cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: white; font-weight: 600; }
+  button.demo-btn { padding: 14px 16px; font-weight: 600; font-size: 13px; flex: 1; min-width: 180px; text-align: left; }
+  button.demo-btn .demo-btn-sub { display: block; font-weight: 400; color: var(--muted); font-size: 11.5px; margin-top: 3px; text-transform: none; letter-spacing: 0; }
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none;
+    align-items: flex-start; justify-content: center; padding: 40px 20px; overflow-y: auto; z-index: 100;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    max-width: 760px; width: 100%; padding: 22px 26px; margin-bottom: 40px;
+  }
+  .modal h2 { margin-top: 0; font-size: 16px; }
+  .kv { display: grid; grid-template-columns: 160px 1fr; gap: 6px 14px; font-size: 13px; margin: 10px 0; }
+  .kv div:nth-child(odd) { color: var(--muted); }
+  .block-quote { background: var(--panel-2); border-left: 3px solid var(--accent); padding: 10px 14px; border-radius: 6px; font-size: 13px; margin: 8px 0; white-space: pre-wrap;}
+  .close-x { float: right; cursor: pointer; color: var(--muted); font-size: 20px; line-height: 1; }
+  .risk-bar-wrap { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 12px; }
+  .risk-bar-label { width: 90px; color: var(--muted); }
+  .risk-bar-track { flex: 1; height: 8px; background: var(--panel-2); border-radius: 4px; overflow: hidden; }
+  .risk-bar-fill { height: 100%; border-radius: 4px; transition: width .4s ease; }
+  .demo-note { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .badge-scenario { font-size: 11px; padding: 2px 8px; border-radius: 6px; background: var(--panel-2); color: var(--muted); border: 1px solid var(--border); }
+  .same-risk-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 900px) { .same-risk-grid { grid-template-columns: 1fr; } }
+  .loading { color: var(--muted); padding: 20px; text-align: center; }
+  .hidden { display: none !important; }
+
+  /* Live control */
+  .lc-form label { display: block; font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 14px 0 6px; }
+  .lc-form label:first-child { margin-top: 0; }
+  .lc-form select, .lc-form textarea, .lc-form input[type=text] {
+    width: 100%; background: var(--panel-3); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 10px 12px; font-size: 13.5px; font-family: inherit; resize: vertical;
+  }
+  .lc-form textarea { min-height: 64px; line-height: 1.4; }
+  .lc-extra { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 14px; }
+  @media (max-width: 900px) { .lc-extra { grid-template-columns: 1fr; } }
+  .lc-extra label { margin: 0 0 4px; }
+
+  .timeline { display: flex; flex-wrap: wrap; gap: 0; margin: 18px 0 4px; }
+  .tl-step {
+    flex: 1; min-width: 120px; text-align: center; padding: 10px 6px; font-size: 11.5px;
+    color: var(--muted); border-bottom: 3px solid var(--border); position: relative; transition: all .25s ease;
+  }
+  .tl-step.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  .tl-step.done { color: var(--allow); border-bottom-color: var(--allow); }
+
+  .decision-banner {
+    border-radius: var(--radius); padding: 22px 26px; text-align: center; margin: 18px 0;
+    border: 1px solid var(--border);
+  }
+  .decision-banner .decision-label { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .decision-banner .decision-action { font-size: 34px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+  .decision-banner.d-allow { background: rgba(51,193,122,.08); border-color: rgba(51,193,122,.4); } .decision-banner.d-allow .decision-action { color: var(--allow); }
+  .decision-banner.d-warn { background: rgba(232,179,57,.08); border-color: rgba(232,179,57,.4); } .decision-banner.d-warn .decision-action { color: var(--warn); }
+  .decision-banner.d-edit { background: rgba(79,176,232,.08); border-color: rgba(79,176,232,.4); } .decision-banner.d-edit .decision-action { color: var(--edit); }
+  .decision-banner.d-redact { background: rgba(176,110,232,.08); border-color: rgba(176,110,232,.4); } .decision-banner.d-redact .decision-action { color: var(--redact); }
+  .decision-banner.d-reroute { background: rgba(232,143,57,.08); border-color: rgba(232,143,57,.4); } .decision-banner.d-reroute .decision-action { color: var(--reroute); }
+  .decision-banner.d-review { background: rgba(232,89,47,.08); border-color: rgba(232,89,47,.4); } .decision-banner.d-review .decision-action { color: var(--review); }
+  .decision-banner.d-block { background: rgba(225,60,91,.08); border-color: rgba(225,60,91,.4); } .decision-banner.d-block .decision-action { color: var(--block); }
+
+  .before-after { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 900px) { .before-after { grid-template-columns: 1fr; } }
+  .before-after .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 6px; }
+  .before-after .before .block-quote { border-left-color: var(--muted); }
+  .before-after .after .block-quote { border-left-color: var(--redact); }
+
+  .claims-list { font-size: 13px; }
+  .claim-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin: 8px 0; }
+  .claim-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+  .claim-verdict { font-weight:700; font-size:11px; padding:3px 7px; border-radius:5px; background:rgba(91,140,255,.12); color:var(--accent); white-space:nowrap; }
+  .provider-note { font-size:11px; color:var(--muted); margin-top:8px; }
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  @media (max-width: 900px) { .result-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Control<span>Plane</span>.ai</h1>
+    <p>Context-aware, policy-driven runtime control layer for enterprise AI &mdash; Round 2 prototype</p>
+  </div>
+  <nav>
+    <span class="muted mono" id="api-status" style="font-size:12px; margin-right:8px;">connecting…</span>
+    <button id="nav-live" class="active" onclick="showView('live')">Live Control</button>
+    <button id="nav-center" onclick="showView('center')">Control Center</button>
+  </nav>
+</header>
+
+<main>
+
+<div id="view-live">
+
+  <section style="margin-top:0;">
+    <h2>Live Control <span class="sub">watch ControlPlane intercept a real AI response, step by step</span></h2>
+
+    <div class="btns" id="demo-buttons"></div>
+
+    <div class="card lc-form" style="margin-top:16px;">
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div>
+          <label>Use case</label>
+          <select id="lc-usecase">
+            <option value="customer_support">Customer Support</option>
+            <option value="internal_knowledge">Internal Knowledge</option>
+            <option value="decision_support">Decision Support</option>
+          </select>
+        </div>
+        <div>
+          <label>Scenario</label>
+          <input type="text" id="lc-scenario-label" value="Custom" readonly style="opacity:.6;" />
+        </div>
+      </div>
+
+      <label>User input</label>
+      <textarea id="lc-user-input" placeholder="What the user asked the AI...">How do I reset my account password?</textarea>
+
+      <label>AI response</label>
+      <textarea id="lc-ai-output" placeholder="What the AI generated, before ControlPlane sees it...">You can reset your password from the login page by selecting 'Forgot password'.</textarea>
+
+      <div class="lc-extra">
+        <div>
+          <label>Action type</label>
+          <select id="lc-action-type">
+            <option value="informational">Informational</option>
+            <option value="account_modification">Account modification</option>
+            <option value="financial_decision">Financial decision</option>
+            <option value="agent_tool_action">Agent tool action</option>
+          </select>
+        </div>
+        <div>
+          <label>Financial exposure (USD)</label>
+          <input type="text" id="lc-exposure" value="0" />
+        </div>
+        <div>
+          <label>Reversibility</label>
+          <select id="lc-reversibility">
+            <option value="reversible">Reversible</option>
+            <option value="irreversible">Irreversible</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="btns">
+        <button class="primary" id="run-controlplane" onclick="runLiveControl()">▶ Run ControlPlane</button>
+        <button id="generate-protect" onclick="runGeminiProtect()" style="border-color:var(--allow);">✦ Generate + Protect (Gemini)</button>
+      </div>
+      <div class="demo-note">Generate + Protect uses Gemini when configured; otherwise the project remains in deterministic fallback mode.</div>
+    </div>
+
+    <div id="lc-timeline-wrap" class="card hidden" style="margin-top:16px;">
+      <h3 style="margin-bottom:2px;">Execution timeline</h3>
+      <div class="timeline" id="lc-timeline"></div>
+    </div>
+
+    <div id="lc-results" class="hidden">
+
+      <div class="decision-banner" id="lc-decision-banner">
+        <div class="decision-label">ControlPlane decision</div>
+        <div class="decision-action" id="lc-decision-action">—</div>
+      </div>
+
+      <div class="card">
+        <h3>Why</h3>
+        <p id="lc-why" style="font-size:13.5px; line-height:1.5; margin:0;"></p>
+      </div>
+
+      <div class="result-grid">
+        <div class="card">
+          <h3>Risk signals</h3>
+          <div id="lc-risk-signals"></div>
+        </div>
+        <div class="card">
+          <h3>Context</h3>
+          <div class="kv" id="lc-context"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h3>Evidence</h3>
+        <div id="lc-evidence"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h3>Claim verification</h3>
+        <div id="lc-claims" class="claims-list">No semantic verification details yet.</div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h3>Final output</h3>
+        <div id="lc-final-output"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section id="same-risk-section">
+    <h2>Same risk, different context <span class="sub">the central product claim — one claim, three policies</span></h2>
+    <p class="muted" style="font-size:13px; max-width:760px;">
+      The exact same AI response is evaluated three times, once per use case. The risk detectors find the
+      same problem every time. The <em>action</em> ControlPlane takes is different every time — because the
+      policy, and the consequence of getting it wrong, are different.
+    </p>
+    <div class="btns"><button class="primary" id="run-context-demo">▶ Run "same claim, three contexts"</button></div>
+    <div class="same-risk-grid" id="context-demo-results" style="margin-top:14px;"></div>
+    <p class="demo-note" id="context-demo-summary"></p>
+  </section>
+
+</div>
+
+<div id="view-center" class="hidden">
+
+  <section style="margin-top:0;">
+    <h2>Overview</h2>
+    <div class="grid grid-4" id="overview-cards"></div>
+  </section>
+
+  <section>
+    <h2>Risk distribution <span class="sub">average score per dimension across all interactions, 0–1</span></h2>
+    <div class="card" id="risk-distribution"></div>
+  </section>
+
+  <section>
+    <h2>Cost telemetry <span class="sub">simulated — not real provider billing</span></h2>
+    <div class="grid grid-4" id="cost-cards"></div>
+  </section>
+
+  <section>
+    <h2>Recent decisions</h2>
+    <div class="card" style="padding:0; overflow-x:auto;">
+      <table>
+        <thead><tr>
+          <th>Time</th><th>Use case</th><th>Risk (max)</th><th>Consequence</th><th>Decision</th><th>Reason</th>
+        </tr></thead>
+        <tbody id="interactions-table"><tr><td colspan="6" class="loading">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+</main>
+
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal" id="modal-content"></div>
+</div>
+
+<script>
+const API = "http://localhost:8000";
+
+function pillClass(action) { return "pill pill-" + action; }
+function bannerClass(action) { return "decision-banner d-" + action; }
+
+function fmtTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+}
+
+async function fetchJSON(path, opts) {
+  const res = await fetch(API + path, opts);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+function riskColor(dim) {
+  return { performance: "#e8b339", privacy: "#b06ee8", security: "#e13c5b", cost: "#4fb0e8" }[dim] || "#5b8cff";
+}
+
+function escapeHtml(s) {
+  return (s || "").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+}
+
+async function evaluate(body) {
+  return fetchJSON("/interactions/evaluate", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(body) });
+}
+
+/* ---------- view switching ---------- */
+function showView(name) {
+  document.getElementById("view-live").classList.toggle("hidden", name !== "live");
+  document.getElementById("view-center").classList.toggle("hidden", name !== "center");
+  document.getElementById("nav-live").classList.toggle("active", name === "live");
+  document.getElementById("nav-center").classList.toggle("active", name === "center");
+  if (name === "center") refreshCenter();
+}
+
+/* ---------- Live Control ---------- */
+
+const TIMELINE_STEPS = [
+  "Request received",
+  "Risk checks",
+  "Evidence verification",
+  "Context evaluated",
+  "Policy applied",
+  "Decision",
+  "Final output",
+];
+
+function renderTimelineShell() {
+  const wrap = document.getElementById("lc-timeline-wrap");
+  wrap.classList.remove("hidden");
+  document.getElementById("lc-timeline").innerHTML = TIMELINE_STEPS.map((s, i) =>
+    `<div class="tl-step" id="tl-step-${i}">${s}</div>`
+  ).join("");
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function advanceTimeline(i) {
+  for (let j = 0; j < i; j++) {
+    const el = document.getElementById(`tl-step-${j}`);
+    if (el) { el.classList.remove("active"); el.classList.add("done"); }
+  }
+  const active = document.getElementById(`tl-step-${i}`);
+  if (active) active.classList.add("active");
+  await sleep(260);
+}
+
+function riskSignalsHtml(risk) {
+  const dims = ["performance", "privacy", "security", "cost"];
+  return dims.map(dim => {
+    const sig = risk[dim];
+    const score = typeof sig === "number" ? sig : (sig ? sig.score : 0);
+    const descs = (sig && typeof sig === "object" && sig.signals) ? sig.signals.map(s => `<div class="muted" style="font-size:12px;margin-left:98px;">• ${escapeHtml(s.description)}</div>`).join("") : "";
+    return `<div class="risk-bar-wrap">
+        <div class="risk-bar-label" style="text-transform:capitalize;">${dim}</div>
+        <div class="risk-bar-track"><div class="risk-bar-fill" style="width:${score*100}%;background:${riskColor(dim)}"></div></div>
+        <div class="mono" style="width:40px;text-align:right;">${score.toFixed(2)}</div>
+      </div>${descs}`;
+  }).join("");
+}
+
+function evidenceHtml(evidence) {
+  if (!evidence || !evidence.length) {
+    return `<div class="muted" style="font-size:13px;">No supporting or contradicting evidence retrieved from the knowledge base.</div>`;
+  }
+  return evidence.map(e => `<div class="block-quote"><b>${escapeHtml(e.title)}</b> <span class="muted mono">(similarity ${e.similarity})</span><br/>${escapeHtml(e.excerpt)}</div>`).join("");
+}
+
+function finalOutputHtml(originalOutput, r) {
+  const action = r.decision;
+  if (r.redacted_output) {
+    return `<div class="before-after">
+      <div class="before"><div class="label">Before ControlPlane</div><div class="block-quote">${escapeHtml(originalOutput)}</div></div>
+      <div class="after"><div class="label">After ControlPlane (REDACT applied)</div><div class="block-quote">${escapeHtml(r.redacted_output)}</div></div>
+    </div>`;
+  }
+  if (action === "block") {
+    return `<div class="block-quote" style="border-left-color:var(--block);">Output withheld. ControlPlane blocked this response before it reached the user — routed for policy-compliant handling.</div>`;
+  }
+  if (action === "review") {
+    return `<div class="block-quote" style="border-left-color:var(--review);">Output held pending human review. A reviewer must approve, edit, or reject before this reaches the user.<br/><br/><span class="muted">Original AI response:</span><br/>${escapeHtml(originalOutput)}</div>`;
+  }
+  if (action === "reroute") {
+    return `<div class="block-quote" style="border-left-color:var(--reroute);">Request rerouted to a safer/cheaper path instead of returning this response as-is.<br/><br/><span class="muted">Original AI response:</span><br/>${escapeHtml(originalOutput)}</div>`;
+  }
+  return `<div class="block-quote">${escapeHtml(originalOutput)}</div>`;
+}
+
+async function runGeminiProtect() {
+  const body = {
+    user_input: document.getElementById("lc-user-input").value,
+    ai_output: "",
+    generate_with_gemini: true,
+    context: {
+      use_case: document.getElementById("lc-usecase").value,
+      action_type: document.getElementById("lc-action-type").value,
+      financial_exposure_usd: Number(document.getElementById("lc-exposure").value) || 0,
+      reversibility: document.getElementById("lc-reversibility").value,
+    },
+  };
+  document.getElementById("lc-scenario-label").value = "Gemini — Generate + Protect";
+  await runLiveControl(body);
+}
+
+async function runLiveControl(overrideBody) {
+  const runBtn = document.getElementById("run-controlplane");
+  runBtn.disabled = true;
+
+  const body = overrideBody || {
+    user_input: document.getElementById("lc-user-input").value,
+    ai_output: document.getElementById("lc-ai-output").value,
+    context: {
+      use_case: document.getElementById("lc-usecase").value,
+      action_type: document.getElementById("lc-action-type").value,
+      financial_exposure_usd: Number(document.getElementById("lc-exposure").value) || 0,
+      reversibility: document.getElementById("lc-reversibility").value,
+    },
+  };
+
+  document.getElementById("lc-results").classList.add("hidden");
+  renderTimelineShell();
+
+  let result;
+  try {
+    // Step 0: request received (visual only — the call below is the one real network request)
+    await advanceTimeline(0);
+    const resultPromise = evaluate(body);
+    await advanceTimeline(1); // risk checks
+    await advanceTimeline(2); // evidence verification
+    result = await resultPromise;
+    await advanceTimeline(3); // context evaluated
+    await advanceTimeline(4); // policy applied
+    await advanceTimeline(5); // decision
+    await advanceTimeline(6); // final output
+    document.getElementById(`tl-step-6`).classList.remove("active");
+    document.getElementById(`tl-step-6`).classList.add("done");
+  } catch (e) {
+    document.getElementById("lc-timeline-wrap").classList.add("hidden");
+    alert("ControlPlane request failed: " + e.message + "\n\nIs the backend running on " + API + "?");
+    runBtn.disabled = false;
+    return;
+  }
+
+  renderLiveResult(body, result);
+  runBtn.disabled = false;
+  await refreshCenterQuiet();
+}
+
+function renderLiveResult(body, r) {
+  const banner = document.getElementById("lc-decision-banner");
+  banner.className = bannerClass(r.decision);
+  document.getElementById("lc-decision-action").textContent = r.decision;
+
+  document.getElementById("lc-why").textContent = r.reason;
+
+  document.getElementById("lc-risk-signals").innerHTML = riskSignalsHtml(r.risk);
+
+  document.getElementById("lc-context").innerHTML = `
+    <div>Use case</div><div>${body.context.use_case}</div>
+    <div>Consequence</div><div>${r.consequence}</div>
+    <div>Action type</div><div>${body.context.action_type || "informational"}</div>
+    <div>Financial exposure</div><div>$${(body.context.financial_exposure_usd || 0).toLocaleString()}</div>
+    <div>Reversibility</div><div>${body.context.reversibility || "reversible"}</div>
+  `;
+
+  document.getElementById("lc-evidence").innerHTML = evidenceHtml(r.evidence);
+  const claims = r.claims || [];
+  document.getElementById("lc-claims").innerHTML = claims.length ? claims.map(c => {
+    const verdict = escapeHtml((c.verdict || "AMBIGUOUS").toUpperCase());
+    const cls = verdict === "SUPPORTED" ? "allow" : (verdict === "PARTIALLY_SUPPORTED" ? "warn" : (verdict === "AMBIGUOUS" ? "review" : "block"));
+    return `<div class="claim-card"><div class="claim-head"><div><strong>${escapeHtml(c.claim || "")}</strong><div class="muted" style="margin-top:4px;">${escapeHtml(c.reason || "")}</div></div><span class="pill pill-${cls}">${verdict}</span></div><div class="provider-note">Confidence: ${Math.round((Number(c.confidence || 0))*100)}%${c.evidence_ids ? " · Evidence: " + c.evidence_ids.join(", ") : ""}</div></div>`;
+  }).join("") : 'No semantic claim verification returned. Deterministic checks were sufficient for this interaction.';
+  document.getElementById("lc-final-output").innerHTML = finalOutputHtml(r.raw_ai_response || body.ai_output, r);
+
+  document.getElementById("lc-results").classList.remove("hidden");
+  document.getElementById("lc-results").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function populateForm(body, scenarioLabel) {
+  document.getElementById("lc-scenario-label").value = scenarioLabel;
+  document.getElementById("lc-usecase").value = body.context.use_case;
+  document.getElementById("lc-user-input").value = body.user_input;
+  document.getElementById("lc-ai-output").value = body.ai_output;
+  document.getElementById("lc-action-type").value = body.context.action_type || "informational";
+  document.getElementById("lc-exposure").value = body.context.financial_exposure_usd || 0;
+  document.getElementById("lc-reversibility").value = body.context.reversibility || "reversible";
+}
+
+/* ---------- The four required demo flows ---------- */
+
+const DEMOS = {
+  a_safe: {
+    label: "A — Safe FAQ",
+    sub: "Password reset, no risk → ALLOW",
+    body: {
+      user_input: "How do I reset my account password?",
+      ai_output: "You can reset your password from the login page by selecting 'Forgot password'.",
+      context: { use_case: "customer_support", action_type: "informational", financial_exposure_usd: 0, reversibility: "reversible" }
+    }
+  },
+  b_pii: {
+    label: "B — PII Leak",
+    sub: "SSN in the response → REDACT",
+    body: {
+      user_input: "My SSN is 123-45-6789.",
+      ai_output: "I can confirm your SSN is 123-45-6789.",
+      context: { use_case: "customer_support", action_type: "informational", financial_exposure_usd: 0, reversibility: "reversible" }
+    }
+  },
+  c_unsupported: {
+    label: "C — Unsupported Claim",
+    sub: "$50k water damage claim → HUMAN REVIEW",
+    body: {
+      user_input: "Is water damage covered under my policy, up to $50,000?",
+      ai_output: "Yes, water damage is fully covered up to $50,000.",
+      context: { use_case: "decision_support", action_type: "informational", financial_exposure_usd: 0, reversibility: "reversible" }
+    }
+  },
+};
+
+document.getElementById("demo-buttons").innerHTML =
+  Object.entries(DEMOS).map(([key, d]) =>
+    `<button class="demo-btn" onclick="runDemoButton('${key}')">${d.label}<span class="demo-btn-sub">${d.sub}</span></button>`
+  ).join("") +
+  `<button class="demo-btn" onclick="runContextDemo()">D — Same Risk / 3 Contexts<span class="demo-btn-sub">Same claim, 3 policies → WARN / REVIEW / BLOCK</span></button>`;
+
+async function runDemoButton(key) {
+  const d = DEMOS[key];
+  populateForm(d.body, d.label);
+  await runLiveControl(d.body);
+}
+
+/* ---------- Same risk, different context ---------- */
+
+const SAME_RISK_CLAIM = {
+  user_input: "Is water damage covered under my policy, up to $50,000?",
+  ai_output: "Yes, water damage is fully covered up to $50,000.",
+};
+
+const SAME_RISK_CONTEXTS = [
+  { label: "Customer Support", ctx: { use_case: "customer_support", action_type: "informational", financial_exposure_usd: 0, reversibility: "reversible" } },
+  { label: "Internal Knowledge", ctx: { use_case: "internal_knowledge", action_type: "informational", financial_exposure_usd: 0, reversibility: "reversible", user_role: "employee" } },
+  { label: "Decision Support", ctx: { use_case: "decision_support", action_type: "financial_decision", financial_exposure_usd: 50000, reversibility: "irreversible" } },
+];
+
+async function runContextDemo() {
+  document.getElementById("same-risk-section").scrollIntoView({ behavior: "smooth", block: "start" });
+  const container = document.getElementById("context-demo-results");
+  container.innerHTML = SAME_RISK_CONTEXTS.map(c => `<div class="card"><h3>${c.label}</h3><p class="muted" style="font-size:12.5px;">Running ControlPlane…</p></div>`).join("");
+  document.getElementById("context-demo-summary").textContent = "";
+
+  const results = [];
+  for (const c of SAME_RISK_CONTEXTS) {
+    const r = await evaluate({ user_input: SAME_RISK_CLAIM.user_input, ai_output: SAME_RISK_CLAIM.ai_output, context: c.ctx });
+    results.push({ label: c.label, r });
+  }
+
+  container.innerHTML = results.map(({label, r}) => `
+    <div class="card" style="cursor:pointer;" onclick="openDetail('${r.interaction_id}')">
+      <h3>${label}</h3>
+      <div style="margin-bottom:8px;"><span class="${pillClass(r.decision)}">${r.decision}</span> <span class="muted mono" style="font-size:11px;">consequence: ${r.consequence}</span></div>
+      <p class="muted" style="font-size:12.5px;">${escapeHtml(r.reason)}</p>
+    </div>
+  `).join("");
+
+  document.getElementById("context-demo-summary").textContent =
+    "Same AI response. Same underlying risk signal. ControlPlane does not apply one universal threshold — it changes the intervention according to context and consequence.";
+
+  await refreshCenterQuiet();
+}
+
+document.getElementById("run-context-demo").addEventListener("click", runContextDemo);
+
+/* ---------- Control Center (secondary analytics view) ---------- */
+
+async function refreshCenter() {
+  try {
+    await refreshOverview();
+    await refreshTable();
+    document.getElementById("api-status").textContent = "connected";
+  } catch (e) {
+    document.getElementById("api-status").textContent = "backend unreachable — run the API on :8000";
+  }
+}
+
+async function refreshCenterQuiet() {
+  // Keep analytics fresh in the background without disrupting the Live Control view.
+  try { await refreshOverview(); await refreshTable(); document.getElementById("api-status").textContent = "connected"; } catch (e) { /* ignore */ }
+}
+
+async function refreshOverview() {
+  const m = await fetchJSON("/metrics");
+  const d = m.decisions;
+  const cards = [
+    ["Total interactions", m.total_interactions, null],
+    ["Allowed", d.allow, "allow"],
+    ["Redacted / Edited", d.redact + d.edit, "redact"],
+    ["Reviewed / Rerouted", d.review + d.reroute, "review"],
+  ];
+  document.getElementById("overview-cards").innerHTML = cards.map(([label, val, cls]) => `
+    <div class="card">
+      <h3>${label}</h3>
+      <div class="stat-row"><div class="stat">${val}</div>${cls ? `<span class="${pillClass(cls)}">${label}</span>` : ""}</div>
+    </div>`).join("");
+
+  const dims = ["performance", "privacy", "security", "cost"];
+  document.getElementById("risk-distribution").innerHTML = dims.map(dim => {
+    const v = (m.average_risk[dim] || 0);
+    return `<div class="risk-bar-wrap">
+      <div class="risk-bar-label">${dim}</div>
+      <div class="risk-bar-track"><div class="risk-bar-fill" style="width:${v*100}%;background:${riskColor(dim)}"></div></div>
+      <div class="mono" style="width:40px;text-align:right;">${v.toFixed(2)}</div>
+    </div>`;
+  }).join("");
+
+  const c = m.cost_telemetry;
+  document.getElementById("cost-cards").innerHTML = `
+    <div class="card"><h3>Expected cost</h3><div class="stat">$${c.expected_cost_usd.toFixed(4)}</div></div>
+    <div class="card"><h3>Actual cost</h3><div class="stat">$${c.actual_cost_usd.toFixed(4)}</div></div>
+    <div class="card"><h3>Anomalies detected</h3><div class="stat">${c.anomaly_count}</div></div>
+    <div class="card"><h3>Simulated overspend</h3><div class="stat">$${c.estimated_savings_usd_simulated.toFixed(4)}</div>
+      <div class="demo-note">${c.note}</div></div>
+  `;
+}
+
+async function refreshTable() {
+  const rows = await fetchJSON("/interactions?limit=50");
+  document.getElementById("interactions-table").innerHTML = rows.map(r => {
+    const maxRisk = Math.max(...Object.values(r.risk || {}).map(x => x.score), 0);
+    return `<tr class="row" onclick="openDetail('${r.id}')">
+      <td class="mono">${fmtTime(r.created_at)}</td>
+      <td>${r.context.use_case}</td>
+      <td class="mono">${maxRisk.toFixed(2)}</td>
+      <td>${r.decision ? r.decision.consequence : "-"}</td>
+      <td><span class="${pillClass(r.decision ? r.decision.action : 'allow')}">${r.decision ? r.decision.action : '-'}</span></td>
+      <td class="muted" style="max-width:320px;">${r.decision ? r.decision.reason : ""}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="6" class="loading">No interactions yet — run a demo scenario in Live Control.</td></tr>`;
+}
+
+async function openDetail(id) {
+  const r = await fetchJSON(`/interactions/${id}`);
+  const dims = Object.entries(r.risk || {});
+  document.getElementById("modal-content").innerHTML = `
+    <span class="close-x" onclick="closeModal()">&times;</span>
+    <h2>Interaction <span class="mono muted">${r.id}</span></h2>
+    <div class="kv">
+      <div>Use case</div><div>${r.context.use_case}</div>
+      <div>Decision</div><div><span class="${pillClass(r.decision.action)}">${r.decision.action}</span></div>
+      <div>Consequence</div><div>${r.decision.consequence}</div>
+      <div>Policy</div><div class="mono">${r.decision.policy_id}</div>
+      <div>Latency</div><div>${r.latency_ms} ms</div>
+    </div>
+
+    <h3 style="margin-bottom:4px;">Input</h3>
+    <div class="block-quote">${escapeHtml(r.user_input || "(empty)")}</div>
+
+    <h3 style="margin-bottom:4px;">AI output</h3>
+    <div class="block-quote">${escapeHtml(r.ai_output || "(empty)")}</div>
+
+    ${r.redacted_output ? `<h3 style="margin-bottom:4px;">Redacted output</h3><div class="block-quote">${escapeHtml(r.redacted_output)}</div>` : ""}
+
+    <h3 style="margin-bottom:4px;">Risk signals</h3>
+    ${dims.map(([dim, sig]) => `
+      <div class="risk-bar-wrap">
+        <div class="risk-bar-label">${dim}</div>
+        <div class="risk-bar-track"><div class="risk-bar-fill" style="width:${sig.score*100}%;background:${riskColor(dim)}"></div></div>
+        <div class="mono" style="width:40px;text-align:right;">${sig.score.toFixed(2)}</div>
+      </div>
+      ${sig.signals.map(s => `<div class="muted" style="font-size:12px;margin-left:98px;">• ${escapeHtml(s.description)}</div>`).join("")}
+    `).join("")}
+
+    <h3 style="margin-bottom:4px;">Evidence</h3>
+    ${r.evidence.length ? r.evidence.map(e => `<div class="block-quote"><b>${escapeHtml(e.title)}</b> (similarity ${e.similarity})<br/>${escapeHtml(e.excerpt)}</div>`).join("") : `<div class="muted" style="font-size:13px;">No evidence retrieved.</div>`}
+
+    <h3 style="margin-bottom:4px;">Explanation</h3>
+    <div class="kv">
+      <div>What happened</div><div>${r.decision.what_happened}</div>
+      <div>Why</div><div>${r.decision.why}</div>
+      <div>Why this action</div><div>${r.decision.why_this_action}</div>
+    </div>
+  `;
+  document.getElementById("modal-backdrop").classList.add("open");
+}
+
+function closeModal() { document.getElementById("modal-backdrop").classList.remove("open"); }
+document.getElementById("modal-backdrop").addEventListener("click", e => { if (e.target.id === "modal-backdrop") closeModal(); });
+
+/* ---------- init ---------- */
+(async function init() {
+  try {
+    await fetchJSON("/health");
+    document.getElementById("api-status").textContent = "connected";
+  } catch (e) {
+    document.getElementById("api-status").textContent = "backend unreachable — run the API on :8000";
+  }
+  await refreshCenterQuiet();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,26 @@
+policy_id: customer_support_v1
+use_case: customer_support
+fail_mode: fail_open
+description: 'High-volume, low-latency channel. Privacy leakage is never tolerated;
+  weak evidence is treated as a warning rather than an automatic block, since most
+  FAQ answers are low consequence.
+
+  '
+thresholds:
+  performance:
+    medium: warn
+    high: warn
+    critical: warn
+  privacy:
+    medium: redact
+    high: redact
+    critical: redact
+  security:
+    medium: block
+    high: block
+    critical: block
+  cost:
+    high: reroute
+    critical: review
+consequence_overrides:
+  critical: block

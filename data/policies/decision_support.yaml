@@ -1,0 +1,27 @@
+policy_id: decision_support_v1
+use_case: decision_support
+fail_mode: fail_closed
+description: 'High-consequence workflow (e.g. insurance claim decisions). Any meaningful
+  uncertainty routes to a human rather than allowing the AI output to directly drive
+  an action; privacy issues block outright.
+
+  '
+thresholds:
+  performance:
+    medium: review
+    high: review
+    critical: review
+  privacy:
+    medium: block
+    high: block
+    critical: block
+  security:
+    medium: block
+    high: block
+    critical: block
+  cost:
+    high: review
+    critical: review
+consequence_overrides:
+  high: review
+  critical: block
